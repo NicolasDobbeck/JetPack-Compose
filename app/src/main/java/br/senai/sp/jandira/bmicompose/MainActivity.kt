@@ -1,9 +1,14 @@
 package br.senai.sp.jandira.bmicompose
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideIn
+import androidx.compose.animation.slideOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,11 +16,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Email
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.booleanResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
@@ -23,9 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.senai.sp.jandira.bmicompose.ui.theme.BMIComposeTheme
+import br.senai.sp.jandira.bmicompose.utils.bmiCalculate
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,24 +69,43 @@ fun BMICalculator() {
         mutableStateOf("")
     }
 
+    var expandState by remember {
+        mutableStateOf(false)
+    }
+
+    var bmiScorState by remember {
+        mutableStateOf(0.0)
+    }
+
+    var isWeightError by remember {
+        mutableStateOf(false)
+    }
+
+    var isHeightState by remember {
+        mutableStateOf(false)
+    }
+
+    //Objeto que controla a requisicao de foco(RequestFocus)
+    var weightFocusRequester = FocusRequester()
 
     //Content
     Column(
         modifier = Modifier
             .fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.Center
     ) {
         //Header
-        Column (
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 //Espaçamento no top
                 .padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
-        ){
+        ) {
             Image(
                 //BUscar a imagem
-                painter = painterResource(id = R.drawable.bmi256), contentDescription = "Application Icon",
+                painter = painterResource(id = R.drawable.bmi256),
+                contentDescription = "Application Icon",
                 //Modifica o tamanho da imagem
                 modifier = Modifier.size(120.dp)
             )
@@ -97,11 +129,27 @@ fun BMICalculator() {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             OutlinedTextField(
-                value = weightState, onValueChange = {
-                weightState = it
-            },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                value = weightState,
+                onValueChange = { newWeight ->
+                    var lastChar = if (newWeight.length == 0)
+                        newWeight
+                    else
+                        newWeight.get(newWeight.length - 1)
+                    var newValue =
+                        if (lastChar == '.' || lastChar == ',') newWeight.dropLast(1) else newWeight
+                    weightState = newValue
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(weightFocusRequester),
+//                leadingIcon = {
+//                    Icon(imageVector = Icons.Default.Mouse, contentDescription = "")
+//                },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "")
+                },
+                isError = isWeightError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
 
@@ -112,24 +160,42 @@ fun BMICalculator() {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             OutlinedTextField(
-                value = heightState, onValueChange = {
-                heightState = it
+                value = heightState,
+                onValueChange = { newHeight ->
+                    var lastChar = if (newHeight.length == 0)
+                        newHeight
+                    else
+                        newHeight.get(newHeight.length - 1)
+                    var newValue =
+                        if (lastChar == '.' || lastChar == ',') newHeight.dropLast(1) else newHeight
+                    heightState = newHeight
+                },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "")
                 },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = isHeightState,
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp)
 
             )
 
             Button(
-                onClick = { /*TODO*/ },
+                onClick = {
+                    isWeightError = weightState.length == 0
+                    isHeightState = heightState.length == 0
+                    if (isHeightState == false && isWeightError == false) {
+                        bmiScorState = bmiCalculate(weightState.toInt(), heightState.toDouble())
+                        expandState = true
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp)
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(Color(34,139,34))
+                colors = ButtonDefaults.buttonColors(Color(34, 139, 34))
             ) {
                 Text(
                     text = stringResource(id = R.string.button_calculate),
@@ -137,8 +203,9 @@ fun BMICalculator() {
                     fontSize = 16.sp
                 )
             }
-            Spacer(modifier = Modifier
-                .height(20.dp)
+            Spacer(
+                modifier = Modifier
+                    .height(20.dp)
             )
 
 //            OutlinedTextField(
@@ -151,16 +218,22 @@ fun BMICalculator() {
 //            )
         }
         //Footer
-        Column(
+        AnimatedVisibility(visible = expandState,
+            enter = slideIn(tween(durationMillis = 400)) {
+                IntOffset(it.width, 10000)
+            },
+            exit = slideOut(tween(durationMillis = 500)) {
+                IntOffset(it.width, 10000)
+            }
 
         ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.7f),
+                    .fillMaxHeight(1f),
                 backgroundColor = MaterialTheme.colors.primary,
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                ) {
+            ) {
                 Column(
                     modifier = Modifier
                         .padding(18.dp)
@@ -175,15 +248,15 @@ fun BMICalculator() {
                     )
 
                     Text(
-                        text = "0.00",
+                        text = String.format("%.2f", bmiScorState),
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
                         text = "Congratulaiotions meu nobre, peso ideal!",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight(300),
                         textAlign = TextAlign.Center
                     )
 
@@ -192,18 +265,25 @@ fun BMICalculator() {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                        Button(onClick = { /*TODO*/ },
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Button(
+                            onClick = {
+                                expandState = false
+                                weightState = ""
+                                heightState = ""
+                                weightFocusRequester.requestFocus()
+                            },
                             modifier = Modifier.height(height = 48.dp),
                             colors = ButtonDefaults.buttonColors(Color(137, 119, 248))
-                            ) {
+                        ) {
                             Text(text = stringResource(id = R.string.button_reset))
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        Button(onClick = { /*TODO*/ },
+                        Button(
+                            onClick = { /*TODO*/ },
                             modifier = Modifier.height(height = 48.dp),
                             colors = ButtonDefaults.buttonColors(Color(137, 119, 248))
                         ) {
