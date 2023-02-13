@@ -7,4 +7,6 @@
     <string name="footer_text">Your Score</string>
     <string name="button_reset">Reset</string>
     <string name="button_share">Share</string>
+    <string name="error_text_height">Entering the height is mandatory</string>
+    <string name="error_text_weight">Entering the weight is mandatory</string>
 </resources>

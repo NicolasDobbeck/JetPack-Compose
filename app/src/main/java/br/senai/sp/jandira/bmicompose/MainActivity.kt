@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.senai.sp.jandira.bmicompose.ui.theme.BMIComposeTheme
 import br.senai.sp.jandira.bmicompose.utils.bmiCalculate
+import br.senai.sp.jandira.bmicompose.utils.getColors
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,8 +48,7 @@ class MainActivity : ComponentActivity() {
             BMIComposeTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background
                 ) {
                     BMICalculator()
                 }
@@ -85,22 +85,31 @@ fun BMICalculator() {
         mutableStateOf(false)
     }
 
+    var colorScore by remember {
+        mutableStateOf(false)
+    }
+
+//    var isTextHeightError by remember {
+//        mutableStateOf(false)
+//    }
+//
+//    var isTextWeightError by remember {
+//        mutableStateOf(false)
+//    }
+
     //Objeto que controla a requisicao de foco(RequestFocus)
     var weightFocusRequester = FocusRequester()
 
     //Content
     Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center
     ) {
         //Header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 //Espaçamento no top
-                .padding(top = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(top = 16.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 //BUscar a imagem
@@ -131,22 +140,30 @@ fun BMICalculator() {
             OutlinedTextField(
                 value = weightState,
                 onValueChange = { newWeight ->
-                    var lastChar = if (newWeight.length == 0)
+                    var lastChar = if (newWeight.length == 0) {
+                        isWeightError = true
                         newWeight
-                    else
+                    } else {
                         newWeight.get(newWeight.length - 1)
-                    var newValue =
-                        if (lastChar == '.' || lastChar == ',') newWeight.dropLast(1) else newWeight
+                        isWeightError = false
+                    }
+
+                    var newValue = if (lastChar == '.' || lastChar == ',') newWeight.dropLast(1)
+                    else newWeight
+
                     weightState = newValue
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(weightFocusRequester),
-//                leadingIcon = {
-//                    Icon(imageVector = Icons.Default.Mouse, contentDescription = "")
-//                },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.MonitorWeight, contentDescription = "")
+                },
                 trailingIcon = {
-                    Icon(imageVector = Icons.Default.Info, contentDescription = "")
+                    if (isWeightError) Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = ""
+                    )
                 },
                 isError = isWeightError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -154,6 +171,14 @@ fun BMICalculator() {
                 shape = RoundedCornerShape(16.dp)
 
             )
+            if (isWeightError) {
+                Text(
+                    text = stringResource(id = R.string.error_text_weight),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.Red,
+                    textAlign = TextAlign.End
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = stringResource(id = R.string.height),
@@ -162,16 +187,26 @@ fun BMICalculator() {
             OutlinedTextField(
                 value = heightState,
                 onValueChange = { newHeight ->
-                    var lastChar = if (newHeight.length == 0)
+                    var lastChar = if (newHeight.length == 0) {
+                        isHeightState = true
                         newHeight
-                    else
+                    } else {
                         newHeight.get(newHeight.length - 1)
-                    var newValue =
-                        if (lastChar == '.' || lastChar == ',') newHeight.dropLast(1) else newHeight
+                        isHeightState = false
+                    }
+                    var newValue = if (lastChar == '.' || lastChar == ',') newHeight.dropLast(1)
+                    else newHeight
+
                     heightState = newHeight
                 },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Height, contentDescription = "")
+                },
                 trailingIcon = {
-                    Icon(imageVector = Icons.Default.Info, contentDescription = "")
+                    if (isHeightState) Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = ""
+                    )
                 },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -180,7 +215,14 @@ fun BMICalculator() {
                 shape = RoundedCornerShape(16.dp)
 
             )
-
+            if (isHeightState) {
+                Text(
+                    text = stringResource(id = R.string.error_text_height),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.Red,
+                    textAlign = TextAlign.End
+                )
+            }
             Button(
                 onClick = {
                     isWeightError = weightState.length == 0
@@ -204,8 +246,7 @@ fun BMICalculator() {
                 )
             }
             Spacer(
-                modifier = Modifier
-                    .height(20.dp)
+                modifier = Modifier.height(20.dp)
             )
 
 //            OutlinedTextField(
@@ -218,22 +259,22 @@ fun BMICalculator() {
 //            )
         }
         //Footer
-        AnimatedVisibility(visible = expandState,
-            enter = slideIn(tween(durationMillis = 400)) {
-                IntOffset(it.width, 10000)
-            },
-            exit = slideOut(tween(durationMillis = 500)) {
-                IntOffset(it.width, 10000)
-            }
+        AnimatedVisibility(visible = expandState, enter = slideIn(tween(durationMillis = 400)) {
+            IntOffset(it.width, 10000)
+        }, exit = slideOut(tween(durationMillis = 500)) {
+            IntOffset(it.width, 10000)
+        }
 
         ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(1f),
-                backgroundColor = MaterialTheme.colors.primary,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-            ) {
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                //Chamando a fun de colors criada no utils
+                backgroundColor = getColors(bmiScorState)
+            )
+            {
                 Column(
                     modifier = Modifier
                         .padding(18.dp)
@@ -263,8 +304,7 @@ fun BMICalculator() {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Button(
@@ -297,8 +337,7 @@ fun BMICalculator() {
 }
 
 @Preview(
-    showBackground = true,
-    showSystemUi = true
+    showBackground = true, showSystemUi = true
 )
 @Composable
 fun BmiCalculatoePrevie() {
